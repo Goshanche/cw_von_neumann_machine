@@ -102,16 +102,16 @@ main(int argc, char *argv[])
 	if (!strcmp(opcode, "add") || !strcmp(opcode, "nand") ||
 		!strcmp(opcode, "lw") || !strcmp(opcode, "sw") ||
 		!strcmp(opcode, "beq") || !strcmp(opcode, "jalr") || 
-		!strcmp(opcode, "idiv") || !strcmp(opcode, "xadd") ||
+		!strcmp(opcode, "xadd") ||
 		!strcmp(opcode, "shl") || !strcmp(opcode, "or") ||
-		!strcmp(opcode, "neg") || !strcmp(opcode, "jma") ||
-		!strcmp(opcode, "jmne") || !strcmp(opcode, "cmp") ||
+		!strcmp(opcode, "jma") ||
+		!strcmp(opcode, "cmp") ||
 		!strcmp(opcode, "bsr")) {
 	    testRegArg(arg0);
 	    testRegArg(arg1);
 	}
 	if (!strcmp(opcode, "add") || !strcmp(opcode, "nand") || 
-		!strcmp(opcode, "idiv") || !strcmp(opcode, "xadd") ||
+		!strcmp(opcode, "xadd") ||
 		!strcmp(opcode, "shl") || !strcmp(opcode, "or")) {
 	    testRegArg(arg2);
 	}
@@ -123,21 +123,23 @@ main(int argc, char *argv[])
 	}
 	if (!strcmp(opcode, ".fill") || !strcmp(opcode, "dec") ||
 		!strcmp(opcode, "je") || !strcmp(opcode, "push") ||
-		!strcmp(opcode, "pop")) {
+		!strcmp(opcode, "pop") || !strcmp(opcode, "jmne")) {
 	    testAddrArg(arg0);
 	}
 
 	/* check for enough arguments */
 	if ((strcmp(opcode, "halt") && strcmp(opcode, "noop") &&
 		strcmp(opcode, ".fill") && strcmp(opcode, "jalr") &&
-		strcmp(opcode, "neg") && strcmp(opcode, "dec") && 
+		strcmp(opcode, "dec") && strcmp(opcode, "neg") &&
 		strcmp(opcode, "cmp") && strcmp(opcode, "je") && 
 		strcmp(opcode, "bsr") && strcmp(opcode, "pop") &&
-		strcmp(opcode, "push") && arg2[0] == '\0') ||
+		strcmp(opcode, "push") && strcmp(opcode, "idiv") &&
+		strcmp(opcode, "jmne") && arg2[0] == '\0') ||
 		/* need arg1 */
 		(!strcmp(opcode, "jalr") && arg1[0] == '\0') ||
 		/* need arg0 */
 		(!strcmp(opcode, ".fill") && arg0[0] == '\0') ||
+		(!strcmp(opcode, "jmne") && arg0[0] == '\0') ||
 		(!strcmp(opcode, "dec") && arg0[0] == '\0') ||
 		(!strcmp(opcode, "push") && arg0[0] == '\0') || 
 		(!strcmp(opcode, "pop") && arg0[0] == '\0')) {
@@ -206,8 +208,7 @@ main(int argc, char *argv[])
 	} else if (!strcmp(opcode, "noop")) {
 	    num = (NOOP << 21);
 	} else if(!strcmp(opcode, "idiv")) {
-		num = (IDIV << 21) | (atoi(arg0) << 18) | (atoi(arg1) << 15)
-			| atoi(arg2);
+		num = (IDIV << 21);
 	} else if(!strcmp(opcode, "dec")) {
 		num = (DEC << 21) | (atoi(arg0) << 18);
 	} else if(!strcmp(opcode, "xadd")) {
@@ -220,7 +221,7 @@ main(int argc, char *argv[])
 		num = (OR << 21) | (atoi(arg0) << 18) | (atoi(arg1) << 15)
 			| atoi(arg2);
 	} else if(!strcmp(opcode, "neg")) {
-		num = (NEG << 21) | (atoi(arg0) << 18) | (atoi(arg1) << 15);
+		num = (NEG << 21);
 	} else if(!strcmp(opcode, "cmp")) {
 		num = (CMP << 21) | (atoi(arg0) << 18) | (atoi(arg1) << 15);
 	} else if (!strcmp(opcode, "bsr")) {
@@ -229,6 +230,23 @@ main(int argc, char *argv[])
 		num = (POP << 21) | (atoi(arg0) << 18);
 	} else if (!strcmp(opcode, "push")) {
 		num = (PUSH << 21) | (atoi(arg0) << 18);
+	} else if (!strcmp(opcode, "jmne")) {
+		if (!isNumber(arg0)) {
+			addressField = translateSymbol(labelArray, labelAddress,
+				numLabels, arg0);
+			addressField = addressField - address - 1;
+		}
+		else {
+			addressField = atoi(arg0);
+		}
+
+		if (addressField < -16384 || addressField > 16384) {
+			printf("error: offset %d out of range\n", addressField);
+			exit(1);
+		}
+
+		addressField = addressField & 0x7FFF;
+		num = (JMNE << 21) | addressField;
 	} else if (!strcmp(opcode, "je")) {
 		if (!isNumber(arg0)) {
 			addressField = translateSymbol(labelArray, labelAddress,
@@ -280,8 +298,7 @@ main(int argc, char *argv[])
 			num = (JMA << 21) | (atoi(arg0) << 18) | (atoi(arg1) << 15)
 				| addressField;
 		} else if (!strcmp(opcode, "jmne")) {
-			num = (JMNE << 21) | (atoi(arg0) << 18) | (atoi(arg1) << 15)
-				| addressField;
+			num = (JMNE << 21) | addressField;
 		} else if (!strcmp(opcode, "je")) {
 			num = (JE << 21) | addressField;
 	    } else {

@@ -168,8 +168,19 @@ run(stateType state)
 		if((unsigned int)state.reg[arg0] > (unsigned int)state.reg[arg1])
 			state.pc = state.pc + addressField;
 	} else if (opcode == JMNE) {
-		if (state.reg[arg0] != state.reg[arg1])
+		if (state.sp > 30) {
+			printf("Stack underflow: not enough operands for JMNE\n");
+			exit(1);
+		}
+
+		int val1 = state.stack[state.sp];
+		state.sp++;
+		int val2 = state.stack[state.sp];
+		state.sp++;
+
+		if (val1 != val2) {
 			state.pc = state.pc + addressField;
+		}
 	} else if (opcode == NOOP) {
 	} else if (opcode == HALT) {
 	    printf("machine halted\n");
@@ -178,7 +189,36 @@ run(stateType state)
 	    printState(&state);
 	    exit(0);
 	} else if (opcode == IDIV) {
-		state.reg[arg2] = state.reg[arg0] / state.reg[arg1];
+		if (state.sp >= 31) { 
+			printf("Stack underflow error: not enough operands for IDIV\n");
+			exit(1);
+		}
+
+		int divisor = state.stack[state.sp];
+		state.sp++;
+
+		if (state.sp >= 32) {
+			printf("Stack underflow error: not enough operands for IDIV\n");
+			exit(1);
+		}
+
+		int dividend = state.stack[state.sp];
+		state.sp++;
+
+		if (divisor == 0) {
+			printf("Division by zero error in IDIV\n");
+			exit(1);
+		}
+
+		int result = dividend / divisor;
+
+		if (state.sp <= 0) {
+			printf("Stack overflow error on IDIV result push\n");
+			exit(1);
+		}
+		state.sp--;
+		state.stack[state.sp] = result;
+
 	} else if (opcode == DEC) {
 		state.reg[arg0] = state.reg[arg0] - 1;
 	} else if (opcode == XADD) {
@@ -191,7 +231,14 @@ run(stateType state)
 	} else if (opcode == OR) {
 		state.reg[arg2] = state.reg[arg0] | state.reg[arg1];
 	} else if (opcode == NEG) {
-		state.reg[arg0] = -state.reg[arg1];
+		if (state.sp < 32) {
+			state.stack[state.sp] = -state.stack[state.sp];
+			state.zf = (state.stack[state.sp] == 0);
+		}
+		else {
+			printf("Stack underflow at NEG\n");
+			exit(1);
+		}
 	} else if (opcode == CMP) {
 		if ((state.reg[arg0] - state.reg[arg1]) == 0)
 			state.zf = 1;

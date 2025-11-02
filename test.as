@@ -1,10 +1,11 @@
- lw 0 1 five
- push 1
- lw 0 2 two
- push 2
- pop 3
- pop 4
+ lw 0 1 a
+ lw 0 2 b
+ lw 0 3 c
+ cmp 1 2
+ je ad
  halt
-five .fill 5
-two .fill 3
-res .fill 0
+ad push 1
+ halt
+a .fill 3
+b .fill 3
+c .fill 2
